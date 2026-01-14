@@ -3,6 +3,9 @@ export type PieceType = 'purpose' | 'customers' | 'boundaries' | 'features' | 'm
 
 export type PieceStatus = 'locked' | 'available' | 'in_progress' | 'complete';
 
+// MVP piece types for Sprint 1 (subset of all piece types)
+export const MVP_PIECE_TYPES: PieceType[] = ['purpose', 'customers', 'boundaries', 'features', 'mvp'];
+
 // Metadata for each puzzle piece type
 export const PIECE_METADATA: Record<PieceType, {
   title: string;
@@ -86,9 +89,15 @@ export interface Message {
   created_at: string;
 }
 
-// Insert types (without auto-generated fields)
-export type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
-export type PuzzlePieceInsert = Omit<PuzzlePiece, 'id' | 'created_at' | 'updated_at'>;
+// Insert types (without auto-generated fields, with optional description)
+export type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at'> & {
+  description?: string | null;
+};
+export type PuzzlePieceInsert = Omit<PuzzlePiece, 'id' | 'created_at' | 'updated_at'> & {
+  status?: PieceStatus;
+  content?: Record<string, unknown> | null;
+  summary?: string | null;
+};
 export type ConversationInsert = Omit<Conversation, 'id' | 'created_at' | 'updated_at'>;
 export type MessageInsert = Omit<Message, 'id' | 'created_at'>;
 
