@@ -2,18 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export default function SignupPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,14 +45,47 @@ export default function SignupPage() {
         return;
       }
 
-      router.push('/projects');
-      router.refresh();
+      setIsSuccess(true);
     } catch {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Companero
+            </h1>
+            <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-green-800">
+                Check your email
+              </h2>
+              <p className="mt-3 text-green-700">
+                We&apos;ve sent a confirmation link to <strong>{email}</strong>.
+              </p>
+              <p className="mt-2 text-sm text-green-600">
+                Click the link in the email to activate your account and get started with Companero.
+              </p>
+            </div>
+            <p className="mt-6 text-sm text-gray-600">
+              Didn&apos;t receive the email? Check your spam folder or{' '}
+              <button
+                onClick={() => setIsSuccess(false)}
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                try again
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
