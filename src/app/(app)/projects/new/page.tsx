@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MVP_PIECE_TYPES } from '@/types/database';
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -51,26 +50,7 @@ export default function NewProjectPage() {
         return;
       }
 
-      // Create initial puzzle pieces for the project
-      const pieces = MVP_PIECE_TYPES.map((pieceType, index) => ({
-        project_id: project.id,
-        piece_type: pieceType,
-        status: index === 0 ? 'available' : 'locked',
-        content: null,
-        summary: null,
-      }));
-
-      const { error: piecesError } = await supabase
-        .from('puzzle_pieces')
-        .insert(pieces);
-
-      if (piecesError) {
-        // Clean up the project if pieces failed
-        await supabase.from('projects').delete().eq('id', project.id);
-        setError('Failed to initialize project');
-        return;
-      }
-
+      // Puzzle pieces are created automatically by database trigger
       router.push(`/project/${project.id}`);
     } catch {
       setError('An unexpected error occurred');
