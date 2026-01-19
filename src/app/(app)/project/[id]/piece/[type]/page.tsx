@@ -87,6 +87,7 @@ export default async function PiecePage({ params }: PiecePageProps) {
           <ChatInterface
             projectId={id}
             pieceType={pieceType}
+            pieceId={currentPiece.id}
           />
         </div>
       </div>

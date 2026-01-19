@@ -3,13 +3,15 @@
 import { useChat } from '@ai-sdk/react';
 import { TextStreamChatTransport, type UIMessage } from 'ai';
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Send, RefreshCw } from 'lucide-react';
+import { Send, RefreshCw, CheckCircle, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PIECE_METADATA, type PieceType } from '@/types/database';
 
 export interface ChatInterfaceProps {
   projectId: string;
   pieceType: PieceType;
+  pieceId: string;
   conversationId?: string;
   onComplete?: (summary: string) => void;
 }
@@ -25,11 +27,17 @@ function getMessageText(message: UIMessage): string {
 export function ChatInterface({
   projectId,
   pieceType,
+  pieceId,
   conversationId,
 }: ChatInterfaceProps) {
+  const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
 
   const metadata = PIECE_METADATA[pieceType];
 
@@ -78,16 +86,63 @@ export function ChatInterface({
     }
   };
 
+  const handleComplete = async () => {
+    if (!summary.trim()) {
+      setCompleteError('Please provide a summary of what you defined for this piece.');
+      return;
+    }
+
+    setIsCompleting(true);
+    setCompleteError(null);
+
+    try {
+      const response = await fetch('/api/pieces/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pieceId,
+          summary: summary.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to complete piece');
+      }
+
+      // Success - redirect back to project page
+      router.push(`/project/${projectId}`);
+      router.refresh();
+    } catch (err) {
+      setCompleteError(err instanceof Error ? err.message : 'Failed to complete piece');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{metadata.icon}</span>
-          <div>
-            <h2 className="font-semibold text-gray-900">{metadata.title}</h2>
-            <p className="text-xs text-gray-500">{metadata.description}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{metadata.icon}</span>
+            <div>
+              <h2 className="font-semibold text-gray-900">{metadata.title}</h2>
+              <p className="text-xs text-gray-500">{metadata.description}</p>
+            </div>
           </div>
+          {messages.length > 0 && (
+            <Button
+              onClick={() => setShowCompleteModal(true)}
+              variant="primary"
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Complete Piece
+            </Button>
+          )}
         </div>
       </div>
 
@@ -190,6 +245,66 @@ export function ChatInterface({
           Press Enter to send, Shift+Enter for new line
         </p>
       </div>
+
+      {/* Completion Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Complete {metadata.title}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCompleteModal(false);
+                  setCompleteError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Write a brief summary of what you defined for this piece. This will help provide
+              context for the following pieces.
+            </p>
+
+            <textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder={`Summarize your ${metadata.title.toLowerCase()}...`}
+              rows={4}
+              className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+
+            {completeError && (
+              <p className="text-sm text-red-600 mt-2">{completeError}</p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowCompleteModal(false);
+                  setCompleteError(null);
+                }}
+                disabled={isCompleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleComplete}
+                disabled={isCompleting || !summary.trim()}
+                variant="primary"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isCompleting ? 'Completing...' : 'Mark as Complete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
